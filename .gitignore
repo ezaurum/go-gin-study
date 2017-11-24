@@ -1,0 +1,9 @@
+.idea/
+*.exe
+*.out
+*.so
+*.dll
+*.test
+.glide/
+*.lock
+vendor/
