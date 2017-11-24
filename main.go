@@ -7,15 +7,20 @@ import (
 	"time"
 )
 
-func main() {
+
+func setupRouter() *gin.Engine {
 	r := gin.Default()
+	r.GET("/ping", func(c *gin.Context) {
+		c.String(200, "pong")
+	})
+	return r
+}
+
+
+func main() {
+	r := setupRouter()
 	//TODO r.LoadHTMLGlob("templates/**/*")
 	r.GET("/testing", startPage)
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
 
 	//TODO html := template.Must(template.ParseFiles("file1", "file2"))
 	//TODO router.SetHTMLTemplate(html)
