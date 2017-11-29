@@ -2,25 +2,109 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/sessions"
 	"net/http"
 	"log"
 	"time"
 )
-
-
 func setupRouter() *gin.Engine {
 	r := gin.Default()
+
+	store := sessions.NewCookieStore([]byte("secret"))
+
+	handlerFunc := sessions.Sessions("WEB_SESSION", store)
+	r.Use(handlerFunc)
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.String(200, "pong")
 	})
+
+	r.GET("login2", Hn(func(context *gin.Context, session sessions.Session) {
+		var count int
+		//v := session.Values["count"]
+		v := session.Get("count")
+
+		if v == nil {
+			count = 0
+			//session.Values["foo"] = "bar"
+			//session.Values[42] = 43
+		} else {
+			count = v.(int)
+			count++
+		}
+		session.Set("count", count)
+		session.Save()
+		context.JSON(200, gin.H{"count": count})
+	}))
 	return r
 }
 
+type SessionHandler func(context *gin.Context, session sessions.Session)
+
+func Hn (handler SessionHandler) gin.HandlerFunc {
+	return func(context *gin.Context) {
+		session := sessions.Default(context)
+		handler(context, session)
+		session.Save()
+	}
+}
 
 func main() {
 	r := setupRouter()
 	//TODO r.LoadHTMLGlob("templates/**/*")
 	r.GET("/testing", startPage)
+
+
+	r.GET("login", func(context *gin.Context) {
+		session := sessions.Default(context)
+		session.Options(sessions.Options{
+			MaxAge:10,
+		})
+		session.Set("sessionID", 1)
+		session.Save()
+		context.JSON(200, gin.H{"sessionid": 1})
+	})
+
+	r.GET("check", func(context *gin.Context) {
+		session := sessions.Default(context)
+
+		sessionID := session.Get("sessionID")
+
+		if nil == sessionID {
+			context.JSON(http.StatusForbidden, gin.H{"error":"login-required"})
+		} else {
+			context.JSON(http.StatusOK, gin.H{"sessionID":sessionID})
+		}
+	})
+
+	r.GET("sessions", func(context *gin.Context) {
+		session := sessions.Default(context)
+
+		// Get a session. We're ignoring the error resulted from decoding an
+		// existing session: Get() always returns a session, even if empty.
+		//session, _ := store.Get(context.Request, "session-name")
+		// Set some session values.
+
+		var count int
+		//v := session.Values["count"]
+		v := session.Get("count")
+
+		if v == nil {
+			count = 0
+			//session.Values["foo"] = "bar"
+			//session.Values[42] = 43
+		} else {
+			count = v.(int)
+			count++
+		}
+		session.Set("count", count)
+		//session.Values["count"] = count
+
+		// Save it before we write to the response/return from the handler.
+		//session.Save(context.Request, context.Writer)
+		session.Save()
+		context.JSON(200, gin.H{"count": count})
+	})
 
 	//TODO html := template.Must(template.ParseFiles("file1", "file2"))
 	//TODO router.SetHTMLTemplate(html)
